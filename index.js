@@ -594,4 +594,24 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// ─── أمر -خط ─────────────────────────────────────────────────────────────────
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (message.content.trim() === '-خط') {
+        const dividerPath = [
+            path.join(__dirname, 'assets', 'og-divider.png'),
+            path.join(process.cwd(), 'assets', 'og-divider.png')
+        ].find(p => fs.existsSync(p)) || null;
+
+        try {
+            if (dividerPath) {
+                await message.channel.send({ files: [new AttachmentBuilder(dividerPath, { name: 'og-divider.png' })] });
+            }
+            await message.delete().catch(() => null);
+        } catch (err) {
+            console.error('[-خط error]', err.message);
+        }
+    }
+});
+
 client.login(TOKEN);
