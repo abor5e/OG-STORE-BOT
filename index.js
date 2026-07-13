@@ -159,7 +159,6 @@ client.on('interactionCreate', async (interaction) => {
         const { commandName } = interaction;
 
         if (commandName === 'ticket') {
-            const bannerPath = path.join(__dirname, 'assets', 'og-store-banner.png');
             const menu = new StringSelectMenuBuilder()
                 .setCustomId('ticket-menu')
                 .setPlaceholder('اختر نوع طلبك...')
@@ -172,11 +171,26 @@ client.on('interactionCreate', async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(menu);
 
-            if (fs.existsSync(bannerPath)) {
-                const attachment = new AttachmentBuilder(bannerPath, { name: 'og-store-banner.png' });
-                await interaction.reply({ files: [attachment], components: [row] });
-            } else {
-                await interaction.reply({ content: '\uD83D\uDED2 **OG Store** — اختر نوع طلبك:', components: [row] });
+            // أبحث عن الصورة في مسارين مختلفين
+            const tryPaths = [
+                path.join(__dirname, 'assets', 'og-store-banner.png'),
+                path.join(process.cwd(), 'assets', 'og-store-banner.png')
+            ];
+            const bannerPath = tryPaths.find(p => fs.existsSync(p)) || null;
+            console.log('[ticket] bannerPath:', bannerPath, '| __dirname:', __dirname, '| cwd:', process.cwd());
+
+            try {
+                if (bannerPath) {
+                    const attachment = new AttachmentBuilder(bannerPath, { name: 'og-store-banner.png' });
+                    // أرسل الصورة والقائمة كرسالة عادية في القناة
+                    await interaction.channel.send({ files: [attachment], components: [row] });
+                } else {
+                    await interaction.channel.send({ components: [row] });
+                }
+                await interaction.reply({ content: '\u2705 تم إرسال لوحة التذاكر.', flags: 64 });
+            } catch (err) {
+                console.error('[ticket panel error]', err.message);
+                await interaction.reply({ content: '\u274C خطأ: `' + err.message + '`', flags: 64 });
             }
             return;
         }
