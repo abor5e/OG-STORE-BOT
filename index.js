@@ -423,6 +423,12 @@ client.on('interactionCreate', async (interaction) => {
 
             const channel = await guild.channels.create({ name: channelName, type: ChannelType.GuildText, permissionOverwrites });
 
+            const isPurchase = selectedValue === 'purchase';
+            const purchaseBannerPath = [
+                path.join(__dirname, 'assets', 'purchase-banner.png'),
+                path.join(process.cwd(), 'assets', 'purchase-banner.png')
+            ].find(p => fs.existsSync(p)) || null;
+
             const ticketEmbed = new EmbedBuilder()
                 .setTitle((categoryEmojis[selectedValue] || '\uD83C\uDFAB') + ' تذكرة #' + ticketNumber)
                 .addFields(
@@ -433,6 +439,10 @@ client.on('interactionCreate', async (interaction) => {
                 .setDescription('أهلاً بك في **OG Store**! يرجى شرح طلبك وسيتولى أحد الإدارة مساعدتك قريباً.')
                 .setColor(0x2ECC71)
                 .setTimestamp();
+
+            if (isPurchase && purchaseBannerPath) {
+                ticketEmbed.setImage('attachment://purchase-banner.png');
+            }
 
             const claimButton = new ButtonBuilder()
                 .setCustomId('claim-ticket:' + ticketNumber + ':' + member.id)
@@ -449,7 +459,11 @@ client.on('interactionCreate', async (interaction) => {
             const pings = ['<@' + member.id + '>'];
             if (activeRoleId) pings.push('<@&' + activeRoleId + '>');
 
-            await channel.send({ content: pings.join(' '), embeds: [ticketEmbed], components: [new ActionRowBuilder().addComponents(claimButton, closeButton)] });
+            const openMsgPayload = { content: pings.join(' '), embeds: [ticketEmbed], components: [new ActionRowBuilder().addComponents(claimButton, closeButton)] };
+            if (isPurchase && purchaseBannerPath) {
+                openMsgPayload.files = [new AttachmentBuilder(purchaseBannerPath, { name: 'purchase-banner.png' })];
+            }
+            await channel.send(openMsgPayload);
 
             const openCfg = loadGuildConfig(guildId);
             if (!openCfg.channelOwners) openCfg.channelOwners = {};
@@ -541,7 +555,22 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             await channel.permissionOverwrites.set(claimOverwrites);
-            await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\uD83D\uDC64 تم الاستلام بواسطة <@' + claimant.id + '>.\nسيتولى طلبك.').setColor(0x2ECC71).setTimestamp()] });
+
+            const claimIsPurchase = channelCat === 'purchase';
+            const claimBannerPath = claimIsPurchase ? ([
+                path.join(__dirname, 'assets', 'purchase-banner.png'),
+                path.join(process.cwd(), 'assets', 'purchase-banner.png')
+            ].find(p => fs.existsSync(p)) || null) : null;
+
+            const claimEmbed = new EmbedBuilder()
+                .setDescription('\uD83D\uDC64 تم الاستلام بواسطة <@' + claimant.id + '>.\nسيتولى طلبك.')
+                .setColor(0x2ECC71)
+                .setTimestamp();
+            if (claimBannerPath) claimEmbed.setImage('attachment://purchase-banner.png');
+
+            const claimReplyPayload = { embeds: [claimEmbed] };
+            if (claimBannerPath) claimReplyPayload.files = [new AttachmentBuilder(claimBannerPath, { name: 'purchase-banner.png' })];
+            await interaction.reply(claimReplyPayload);
         } catch (err) { console.error('Claim error:', err.message); }
         return;
     }
@@ -588,29 +617,25 @@ client.on('interactionCreate', async (interaction) => {
         if (closeCfg.channelOwners) delete closeCfg.channelOwners[channel.id];
         saveGuildConfig(guildId, closeCfg);
 
-        await interaction.editReply({ embeds: [new EmbedBuilder().setTitle('\uD83D\uDD12 تم إغلاق التذكرة').setDescription('سيتم حذف هذه القناة خلال 5 ثواني.').setColor(0xED4245).setTimestamp()] });
-        setTimeout(async () => { await channel.delete('أُغلقت بواسطة ' + closer.user.tag).catch(() => null); }, 5000);
+        const closeIsPurchase = closeChannelCat === 'purchase';
+        const closeBannerPath = closeIsPurchase ? ([
+            path.join(__dirname, 'assets', 'purchase-banner.png'),
+            path.join(process.cwd(), 'assets', 'purchase-banner.png')
+        ].find(p => fs.existsSync(p)) || null) : null;
+
+        const closeEmbed = new EmbedBuilder()
+            .setTitle('\uD83D\uDD12 تم إغلاق التذكرة')
+            .setDescription('سيتم حذف هذه القناة خلال 5 ثواني.')
+            .setColor(0xED4245)
+            .setTimestamp();
+        if (closeBannerPath) closeEmbed.setImage('attachment://purchase-banner.png');
+
+        const closeReplyPayload = { embeds: [closeEmbed] };
+        if (closeBannerPath) closeReplyPayload.files = [new AttachmentBuilder(closeBannerPath, { name: 'purchase-banner.png' })];
+        await interaction.editReply(closeReplyPayload);
+
+        setTimeout(async () => { await channel.delete('\u0623\u063F\u0644\u0642\u062A').catch(() => null); }, 5000);
         return;
-    }
-});
-
-// ─── أمر -خط ─────────────────────────────────────────────────────────────────
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    if (message.content.trim() === '-خط') {
-        const dividerPath = [
-            path.join(__dirname, 'assets', 'og-divider.png'),
-            path.join(process.cwd(), 'assets', 'og-divider.png')
-        ].find(p => fs.existsSync(p)) || null;
-
-        try {
-            if (dividerPath) {
-                await message.channel.send({ files: [new AttachmentBuilder(dividerPath, { name: 'og-divider.png' })] });
-            }
-            await message.delete().catch(() => null);
-        } catch (err) {
-            console.error('[-خط error]', err.message);
-        }
     }
 });
 
