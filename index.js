@@ -44,7 +44,12 @@ function loadGuildConfig(guildId) {
 }
 
 function saveGuildConfig(guildId, data) {
-    fs.writeFileSync(path.join(configsDir, guildId + '.json'), JSON.stringify(data, null, 2));
+    try {
+        if (!fs.existsSync(configsDir)) fs.mkdirSync(configsDir, { recursive: true });
+        fs.writeFileSync(path.join(configsDir, guildId + '.json'), JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error('saveGuildConfig error:', err.message);
+    }
 }
 
 async function buildTranscript(channel, ticketNum) {
