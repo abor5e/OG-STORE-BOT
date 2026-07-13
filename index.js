@@ -79,9 +79,9 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('setup-staff')
-        .setDescription('تحديد رتبة الستاف العامة')
+        .setDescription('تحديد رتبة الإدارة العامة')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addRoleOption(opt => opt.setName('role').setDescription('رتبة الستاف').setRequired(true)),
+        .addRoleOption(opt => opt.setName('role').setDescription('رتبة الإدارة').setRequired(true)),
 
     new SlashCommandBuilder()
         .setName('setup-category')
@@ -124,7 +124,7 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('staff-help')
-        .setDescription('عرض أوامر الستاف'),
+        .setDescription('عرض أوامر الإدارة'),
 ].map(cmd => cmd.toJSON());
 
 const client = new Client({
@@ -190,7 +190,7 @@ client.on('interactionCreate', async (interaction) => {
             const cfg = loadGuildConfig(guildId);
             cfg.staffRoleId = role.id;
             saveGuildConfig(guildId, cfg);
-            await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\u2705 تم تعيين <@&' + role.id + '> كرتبة ستاف.').setColor(0x57F287)], flags: 64 });
+            await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\u2705 تم تعيين <@&' + role.id + '> كرتبة إدارة.').setColor(0x57F287)], flags: 64 });
             return;
         }
 
@@ -213,14 +213,14 @@ client.on('interactionCreate', async (interaction) => {
             const cfg = loadGuildConfig(guildId);
             const sortedClaims = Object.entries(cfg.claims || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
             let claimsValue = 'لا توجد بيانات بعد';
-            if (sortedClaims.length > 0) claimsValue = sortedClaims.map((e, i) => (i + 1) + '. <@' + e[0] + '> — **' + e[1] + '** كليمات').join('\n');
+            if (sortedClaims.length > 0) claimsValue = sortedClaims.map((e, i) => (i + 1) + '. <@' + e[0] + '> — **' + e[1] + '** استلامات').join('\n');
             const statsEmbed = new EmbedBuilder()
                 .setTitle('\uD83D\uDCCA إحصائيات التذاكر')
                 .addFields(
                     { name: '\uD83D\uDCE5 إجمالي المفتوحة', value: String(cfg.ticketCount || 0), inline: true },
                     { name: '\uD83D\uDD12 إجمالي المغلقة', value: String(cfg.closedCount || 0), inline: true },
                     { name: '\uD83D\uDFE1 النشطة حالياً', value: String(Math.max(0, (cfg.ticketCount || 0) - (cfg.closedCount || 0))), inline: true },
-                    { name: '\uD83D\uDC64 أفضل الستاف', value: claimsValue }
+                    { name: '\uD83D\uDC64 أفضل الإدارة', value: claimsValue }
                 )
                 .setColor(0x2ECC71).setTimestamp();
             await interaction.reply({ embeds: [statsEmbed], flags: 64 });
@@ -241,10 +241,10 @@ client.on('interactionCreate', async (interaction) => {
             const closer = interaction.member;
             const isAdmin = closer.permissions.has(PermissionFlagsBits.Administrator);
             const hasStaffRole = cfg.staffRoleId && closer.roles.cache.has(cfg.staffRoleId);
-            if (!isAdmin && !hasStaffRole) { await interaction.reply({ content: 'هذا الأمر للستاف فقط.', flags: 64 }); return; }
+            if (!isAdmin && !hasStaffRole) { await interaction.reply({ content: 'هذا الأمر للإدارة فقط.', flags: 64 }); return; }
             const claimantId = cfg.channelClaimants && cfg.channelClaimants[channel.id];
             if (claimantId && !isAdmin && closer.id !== claimantId) {
-                await interaction.reply({ content: '\u274C فقط عضو الستاف الذي كليم التذكرة (<@' + claimantId + '>) أو الإدارة يمكنهم الإغلاق.', flags: 64 });
+                await interaction.reply({ content: '\u274C فقط عضو الإدارة الذي استلم التذكرة (<@' + claimantId + '>) أو الإدارة يمكنهم الإغلاق.', flags: 64 });
                 return;
             }
             const channelName = channel.name;
@@ -274,12 +274,12 @@ client.on('interactionCreate', async (interaction) => {
             const requester = interaction.member;
             const isAdmin = requester.permissions.has(PermissionFlagsBits.Administrator);
             const hasStaffRole = cfg.staffRoleId && requester.roles.cache.has(cfg.staffRoleId);
-            if (!isAdmin && !hasStaffRole) { await interaction.reply({ content: 'هذا الأمر للستاف فقط.', flags: 64 }); return; }
+            if (!isAdmin && !hasStaffRole) { await interaction.reply({ content: 'هذا الأمر للإدارة فقط.', flags: 64 }); return; }
             const targetUser = interaction.options.getUser('user');
             const ownerId = cfg.channelOwners && cfg.channelOwners[channel.id];
             const claimantId = cfg.channelClaimants && cfg.channelClaimants[channel.id];
             if (targetUser.id === ownerId) { await interaction.reply({ content: '\u274C لا يمكنك إزالة صاحب التذكرة.', flags: 64 }); return; }
-            if (targetUser.id === claimantId) { await interaction.reply({ content: '\u274C لا يمكنك إزالة عضو الستاف الكليم.', flags: 64 }); return; }
+            if (targetUser.id === claimantId) { await interaction.reply({ content: '\u274C لا يمكنك إزالة عضو الإدارة المستلمة.', flags: 64 }); return; }
             if (!channel.permissionOverwrites.cache.get(targetUser.id)) { await interaction.reply({ content: '\u274C هذا المستخدم لم يُضف إلى التذكرة.', flags: 64 }); return; }
             await channel.permissionOverwrites.delete(targetUser.id);
             await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\u2705 تم إزالة <@' + targetUser.id + '> من التذكرة.').setColor(0xED4245)] });
@@ -293,7 +293,7 @@ client.on('interactionCreate', async (interaction) => {
             const isAdmin = requester.permissions.has(PermissionFlagsBits.Administrator);
             const hasStaffRole = cfg.staffRoleId && requester.roles.cache.has(cfg.staffRoleId);
             const isTicketOwner = cfg.channelOwners && cfg.channelOwners[channel.id] === requester.id;
-            if (!isAdmin && !hasStaffRole && !isTicketOwner) { await interaction.reply({ content: 'هذا الأمر للستاف وصاحب التذكرة فقط.', flags: 64 }); return; }
+            if (!isAdmin && !hasStaffRole && !isTicketOwner) { await interaction.reply({ content: 'هذا الأمر للإدارة وصاحب التذكرة فقط.', flags: 64 }); return; }
             const targetUser = interaction.options.getUser('user');
             const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
             if (!targetMember) { await interaction.reply({ content: '\u274C العضو غير موجود في السيرفر.', flags: 64 }); return; }
@@ -309,7 +309,7 @@ client.on('interactionCreate', async (interaction) => {
             const isAdmin = requester.permissions.has(PermissionFlagsBits.Administrator);
             const hasStaffRole = cfg.staffRoleId && requester.roles.cache.has(cfg.staffRoleId);
             const claimantId = cfg.channelClaimants && cfg.channelClaimants[channel.id];
-            if (!isAdmin && !hasStaffRole && requester.id !== claimantId) { await interaction.reply({ content: '\u274C فقط الستاف الكليم أو الإدارة يمكنهم إعادة التسمية.', flags: 64 }); return; }
+            if (!isAdmin && !hasStaffRole && requester.id !== claimantId) { await interaction.reply({ content: '\u274C فقط الإدارة المستلمة أو الإدارة يمكنهم إعادة التسمية.', flags: 64 }); return; }
             const newName = interaction.options.getString('name').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').slice(0, 100);
             if (!newName) { await interaction.reply({ content: '\u274C اسم غير صالح.', flags: 64 }); return; }
             const oldName = channel.name;
@@ -323,7 +323,7 @@ client.on('interactionCreate', async (interaction) => {
                 embeds: [new EmbedBuilder().setTitle('\uD83D\uDCCB أوامر الإدارة').addFields(
                     { name: '`/ticket`', value: 'إرسال لوحة التذاكر مع صورة المتجر' },
                     { name: '`/setup-logs`', value: 'تحديد قناة السجلات' },
-                    { name: '`/setup-staff`', value: 'تحديد رتبة الستاف العامة' },
+                    { name: '`/setup-staff`', value: 'تحديد رتبة الإدارة العامة' },
                     { name: '`/setup-category`', value: 'تخصيص رتبة لكل قسم' },
                     { name: '`/close-ticket`', value: 'إغلاق التذكرة وحفظ السجل' },
                     { name: '`/rename-ticket`', value: 'إعادة تسمية قناة التذكرة' },
@@ -343,15 +343,15 @@ client.on('interactionCreate', async (interaction) => {
             const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
             const hasStaffRole = cfg.staffRoleId && member.roles.cache.has(cfg.staffRoleId);
             const hasCategoryRole = cfg.categoryRoles && Object.values(cfg.categoryRoles).some(rid => member.roles.cache.has(rid));
-            if (!isAdmin && !hasStaffRole && !hasCategoryRole) { await interaction.reply({ content: 'هذا الأمر للستاف فقط.', flags: 64 }); return; }
+            if (!isAdmin && !hasStaffRole && !hasCategoryRole) { await interaction.reply({ content: 'هذا الأمر للإدارة فقط.', flags: 64 }); return; }
             await interaction.reply({
-                embeds: [new EmbedBuilder().setTitle('\uD83D\uDCCB أوامر الستاف').setDescription('الأوامر المتاحة داخل التذاكر:').addFields(
-                    { name: '\uD83D\uDD35 كليم التذكرة', value: 'اضغط زر **كليم** لتسجيلك كالمسؤول عنها' },
-                    { name: '`/close-ticket`', value: 'إغلاق التذكرة — للستاف الكليم فقط' },
-                    { name: '`/rename-ticket`', value: 'إعادة تسمية القناة — للستاف الكليم فقط' },
+                embeds: [new EmbedBuilder().setTitle('\uD83D\uDCCB أوامر الإدارة').setDescription('الأوامر المتاحة داخل التذاكر:').addFields(
+                    { name: '\uD83D\uDD35 استلام التذكرة', value: 'اضغط زر **استلام** لتسجيلك كالمسؤول عنها' },
+                    { name: '`/close-ticket`', value: 'إغلاق التذكرة — للإدارة المستلمة فقط' },
+                    { name: '`/rename-ticket`', value: 'إعادة تسمية القناة — للإدارة المستلمة فقط' },
                     { name: '`/add-user`', value: 'إضافة شخص للتذكرة' },
                     { name: '`/remove-user`', value: 'إزالة شخص من التذكرة' },
-                ).setColor(0x2ECC71).setFooter({ text: 'كليم التذكرة أولاً قبل أي إجراء' }).setTimestamp()],
+                ).setColor(0x2ECC71).setFooter({ text: 'استلام التذكرة أولاً قبل أي إجراء' }).setTimestamp()],
                 flags: 64
             });
             return;
@@ -409,15 +409,15 @@ client.on('interactionCreate', async (interaction) => {
                 .addFields(
                     { name: 'القسم', value: categoryLabels[selectedValue] || selectedValue, inline: true },
                     { name: 'فُتحت بواسطة', value: '<@' + member.id + '>', inline: true },
-                    { name: 'الحالة', value: 'مفتوحة — في انتظار الستاف', inline: true }
+                    { name: 'الحالة', value: 'مفتوحة — في انتظار الإدارة', inline: true }
                 )
-                .setDescription('أهلاً بك في **OG Store**! يرجى شرح طلبك وسيتولى أحد الستاف مساعدتك قريباً.')
+                .setDescription('أهلاً بك في **OG Store**! يرجى شرح طلبك وسيتولى أحد الإدارة مساعدتك قريباً.')
                 .setColor(0x2ECC71)
                 .setTimestamp();
 
             const claimButton = new ButtonBuilder()
                 .setCustomId('claim-ticket:' + ticketNumber + ':' + member.id)
-                .setLabel('كليم التذكرة')
+                .setLabel('استلام التذكرة')
                 .setStyle(ButtonStyle.Primary)
                 .setEmoji('\uD83D\uDC64');
 
@@ -477,7 +477,7 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 
-    // ─── زر الكليم ────────────────────────────────────────────────────────────
+    // ─── زر الاستلام ────────────────────────────────────────────────────────────
     if (interaction.isButton() && interaction.customId.startsWith('claim-ticket:')) {
         const parts = interaction.customId.split(':');
         const ticketNumber = parts[1];
@@ -492,7 +492,7 @@ client.on('interactionCreate', async (interaction) => {
         const hasStaffRole = (cfg.staffRoleId && claimant.roles.cache.has(cfg.staffRoleId)) || (catRoleId && claimant.roles.cache.has(catRoleId));
 
         if (!isAdmin && !hasStaffRole) {
-            try { await interaction.reply({ content: 'فقط الستاف المخصص لهذا القسم يمكنه الكليم.', flags: 64 }); } catch {}
+            try { await interaction.reply({ content: 'فقط الإدارة المخصصة لهذا القسم يمكنهاا الاستلام.', flags: 64 }); } catch {}
             return;
         }
 
@@ -522,7 +522,7 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             await channel.permissionOverwrites.set(claimOverwrites);
-            await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\uD83D\uDC64 تم الكليم بواسطة <@' + claimant.id + '>.\nسيتولى طلبك.').setColor(0x2ECC71).setTimestamp()] });
+            await interaction.reply({ embeds: [new EmbedBuilder().setDescription('\uD83D\uDC64 تم الاستلام بواسطة <@' + claimant.id + '>.\nسيتولى طلبك.').setColor(0x2ECC71).setTimestamp()] });
         } catch (err) { console.error('Claim error:', err.message); }
         return;
     }
@@ -543,12 +543,12 @@ client.on('interactionCreate', async (interaction) => {
         const hasStaffRole = (cfg.staffRoleId && closer.roles.cache.has(cfg.staffRoleId)) || (closeCatRoleId && closer.roles.cache.has(closeCatRoleId));
 
         if (!isAdmin && !hasStaffRole) {
-            try { await interaction.reply({ content: 'فقط الستاف يمكنه إغلاق التذكرة.', flags: 64 }); } catch {}
+            try { await interaction.reply({ content: 'فقط الإدارة يمكنها إغلاق التذكرة.', flags: 64 }); } catch {}
             return;
         }
 
         if (claimantId && !isAdmin && closer.id !== claimantId) {
-            try { await interaction.reply({ content: '\u274C فقط عضو الستاف الكليم (<@' + claimantId + '>) أو الإدارة يمكنهم الإغلاق.', flags: 64 }); } catch {}
+            try { await interaction.reply({ content: '\u274C فقط عضو الإدارة المستلمة (<@' + claimantId + '>) أو الإدارة يمكنهم الإغلاق.', flags: 64 }); } catch {}
             return;
         }
 
